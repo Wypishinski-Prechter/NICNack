@@ -11,6 +11,7 @@
 
 void init_leds();
 void init_timers();
+void init_receivepin();
 
 
 #endif /* MONITOR_H_ */

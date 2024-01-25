@@ -15,13 +15,15 @@
 
 #define F_CPU 16000000UL
 
+
 // main
 int main(void){
 	init_usart2(57600,F_CPU);
-
-
 	init_leds();
-	printf("Hello World!!\n");
+	init_receivepin();
+	init_timers();
+
+
 
 	// never return
 	for(;;){}
