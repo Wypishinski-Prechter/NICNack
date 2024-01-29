@@ -19,8 +19,11 @@
 // main
 int main(void){
 	init_usart2(57600,F_CPU);
+	// init LEDs
 	init_leds();
+	// init PA15 to timer and get first input
 	init_receivepin();
+	// start timers
 	init_timers();
 
 
