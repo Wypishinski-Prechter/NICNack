@@ -28,8 +28,6 @@ static volatile RCCr* const RCC = (RCCr*)0x40023800;
 
 static volatile TIMx* const TIM2 = (TIMx*)0x40000000;
 static volatile TIMx* const TIM3 = (TIMx*)0x40000400;
-static volatile uint32_t* const TIM2_SR = (uint32_t*)0x40000410;
-
 
 static volatile uint32_t* const NVIC_ISER = (uint32_t*)0xE000E100;
 
@@ -58,28 +56,35 @@ void init_timers(){
 
 	// Will be using interrupts, need to enable in NVIC TIM3
 	NVIC_ISER[0] = 1<<29;
+
+	// start timer
+	TIM2->CR1 = 1;
+
+	//Set timer to max
+	TIM2->ARR = 0xFFFFFFFF;
+
+	// filters signal
+	TIM2->CCMR1 &= ~(0b11<<4);
+	TIM2->CCMR1 |= (0b11<<4);
+
+
+	// makes Tim2 read only
+	TIM2->CCMR1 |= 0b01;
+
+
+	// Connect timer channel to input pin
+	TIM2->CCER &= ~(1<<3) | ~(1<<1);
+	TIM2->CCER |= (0b1011);
+
+	//start interrupt
+	TIM2->DIER = (1<<1);
+
 	// Will be using interrupts, need to enable in NVIC TIM2
 	NVIC_ISER[0] = 1<<28;
 
-	// Connect timer channel to input pin
-	TIM2->CCER &= ~(0b01011);
-	TIM2->CCER = 0b11;
-
 	//Set status register to 0
-	*TIM2_SR = 0;
+	//TIM2->SR = 0;
 
-	//set pre-scaler
-	TIM2->PSC = 15;
-
-	//start interrupt
-	TIM2->DIER |= (1<<1);
-
-	// makes Tim2 read only
-	TIM2->CCMR1 = ~(0b1100<<4);
-	TIM2->CCMR1 |= (0b11<<4);
-	TIM2->CCMR1 |= 0b01;
-
-	TIM2->ARR = max_16_bit_val;
 
 	// Toggle on match mode
 	TIM3->CCMR1 = 0b11 << 4;
@@ -96,17 +101,22 @@ void init_timers(){
 	TIM3->CCR1 = 18080 + (capture_time);
 	TIM3->CR1  = 1;
 
-	// start timer
-	TIM2->CR1 = 1;
+
 
 }
 
 
 void TIM2_IRQHandler() {
+	// clear isr flag
+	TIM2->SR = 0;
+
+	TIM2->DIER &= (~1<<1);
 	// turn off tim3
 	TIM3->CR1 = 0;
-	// clear isr flag
-	*TIM2_SR = 0;
+
+	//turn on timer3 interrupt
+	TIM3->DIER |= 1;
+
 	// read current state
 	// set A15 to input- rmw
 	GPIOA->MODER &= ~(0b11<<30);
@@ -115,8 +125,9 @@ void TIM2_IRQHandler() {
 	// change to alt function mode
 	GPIOA->MODER &= ~(0b11<<30);
 	GPIOA->MODER |= (0b10<<30);
-	GPIOA->AFRL &= ~(0b1111<<28);
-	GPIOA->AFRL |= (0b0001<<28);
+
+	GPIOA->AFRH &= ~(0b1111<<28);
+	GPIOA->AFRH |= (0b01<<28);
 	// set state to busy, edge is found
 	state = BUSY;
 	// write number to PB5 - PB15 (skipping PB11)
@@ -125,25 +136,34 @@ void TIM2_IRQHandler() {
 	*odr = *odr & ~all_lights;
 	// Or odr's value with a 1 shifted to the left by number
 	*odr |= (1<<state);
+	//*odr |= (1<<8);
+
+	//*odr = *odr & ~all_lights;
+
+
 	int capture_time = TIM2->CCR1;
 	//set TIM3 CCR1 and ARR here
 	TIM3->ARR = 18080 + (capture_time);
 	TIM3->CCR1 = 18080 + (capture_time);
+
+	TIM2->DIER |= (1<<1);
+
 	// turn on timer
 	TIM3->CR1 = 1;
+	TIM2->CR1 = 1;
 }
 
 
 void TIM3_IRQHandler(){
 	//set CCER = 1
 	// clear isr flag
-	TIM3->SR &= ~(1);
+	TIM3->SR &= 0;
 	// turn off both isrs
 	TIM3->DIER &= ~(1);
 	TIM2->DIER &= ~(1<<1);
 	// turn off timer
 	TIM3->CR1 = 0;
-	//TIM2->CR1 = 0;
+	TIM2->CR1 = 0;
 	// check pin for high or low
 	if(pin15 == 1){
 		state = IDLE;
@@ -157,8 +177,8 @@ void TIM3_IRQHandler(){
 	// Or odr's value with a 1 shifted to the left by number
 	*odr |= (1<<state);
 	// turn on timer2 and interrupt
-	//TIM2->CR1 = 1;
-	TIM2->DIER |= 1;
+	TIM2->CR1 = 1;
+	TIM2->DIER |= (1<<1);
 }
 
 void init_receivepin(){
@@ -180,8 +200,8 @@ void init_receivepin(){
 	// change to alt function mode
 	GPIOA->MODER &= ~(0b11<<30);
 	GPIOA->MODER |= (0b10<<30);
-	GPIOA->AFRL &= ~(0b1111<<28);
-	GPIOA->AFRL |= (0b0001<<28);
+	GPIOA->AFRH &= ~(0b1111<<28);
+	GPIOA->AFRH |= (0b01<<28);
 }
 
 
