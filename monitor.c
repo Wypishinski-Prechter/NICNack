@@ -200,6 +200,9 @@ void init_receivepin(){
 	GPIOA->AFRH |= (0b01<<28);
 }
 
+int get_state(){
+	return state;
+}
 
 
 
