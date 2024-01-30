@@ -1,6 +1,5 @@
 /*
  * monitor.c
- * Methods called by main to run the channel monitor
  *
  *  Created on: Jan 23, 2024
  *      Author: wypishinski-prechter
@@ -9,7 +8,7 @@
 #include "monitor.h"
 #include "regs.h"
 
-// defines and file scope vars
+
 #define rcc_ahb1enr 0x40023830
 #define GPIOBEN (1<<1)
 #define GPIOAEN (1<<0)
@@ -37,11 +36,6 @@ static volatile GPIO* const GPIOA = (GPIO*)0x40020000;
 static int state = 0;
 static int pin15 = 0;
 
-
-/*
- * set up leds
- * returns and accepts nothing
- */
 void init_leds(){
 	// enable clock to GPIOB peripheral
 	uint32_t *ahb1enr = (uint32_t*)rcc_ahb1enr;
@@ -52,12 +46,10 @@ void init_leds(){
 	*moder &= ~moder_clear;
 	// set the moder bits to output mode
 	*moder |= moder_setoutput;
+
 }
 
-/*
- * set up timers 2 and 3 for tic and toc
- * accepts and returns nothing
- */
+
 void init_timers(){
 	// clock on for TIM3 and TIM2, bit 1 in APB1ENR
 	RCC->APB1ENR |= 1<<1 | 1<<0;
@@ -93,6 +85,7 @@ void init_timers(){
 	//Set status register to 0
 	//TIM2->SR = 0;
 
+	//TIM3->PSC = 94914;
 
 	// Toggle on match mode
 	TIM3->CCMR1 = 0b11 << 4;
@@ -103,25 +96,25 @@ void init_timers(){
 	// turn on interrupt for UIE
 	TIM3->DIER |= 1;
 
-	int capture_time = TIM2->CCR1;
+	int capture_time = TIM3->CNT;
 	//set TIM3 CCR1 and ARR here
-	TIM3->ARR = 18080 + (capture_time);
-	TIM3->CCR1 = 18080 + (capture_time);
+	TIM3->ARR = 18112;
+	TIM3->CCR1 = 1 + (capture_time);
 	TIM3->CR1  = 1;
+
+
+
 }
 
-/*
- * handler for edge detection
- * turns on tim3 interrupt to check if idle or collision
- * turns on leds to busy
- */
+
 void TIM2_IRQHandler() {
 	// clear isr flag
 	TIM2->SR = 0;
 
-	TIM2->DIER &= (~1<<1);
+	TIM2->DIER &= ~(1<<1);
 	// turn off tim3
 	TIM3->CR1 = 0;
+	TIM3->CNT = 0;
 
 	//turn on timer3 interrupt
 	TIM3->DIER |= 1;
@@ -149,13 +142,7 @@ void TIM2_IRQHandler() {
 
 	//*odr = *odr & ~all_lights;
 
-
-	int capture_time = TIM2->CCR1;
-	//set TIM3 CCR1 and ARR here
-	TIM3->ARR = 18080 + (capture_time);
-	TIM3->CCR1 = 18080 + (capture_time);
-
-	// enable tim2 interrupt
+	TIM2->CCR1;
 	TIM2->DIER |= (1<<1);
 
 	// turn on timer
@@ -163,10 +150,7 @@ void TIM2_IRQHandler() {
 	TIM2->CR1 = 1;
 }
 
-/*
- * tim3 interrupt handler,
- * runs if signal is longer than 1.13ms after being in busy state
- */
+
 void TIM3_IRQHandler(){
 	//set CCER = 1
 	// clear isr flag
@@ -175,8 +159,7 @@ void TIM3_IRQHandler(){
 	TIM3->DIER &= ~(1);
 	TIM2->DIER &= ~(1<<1);
 	// turn off timer
-	TIM3->CR1 = 0;
-	TIM2->CR1 = 0;
+    //	TIM2->CR1 = 0;
 	// check pin for high or low
 	if(pin15 == 1){
 		state = IDLE;
@@ -190,14 +173,10 @@ void TIM3_IRQHandler(){
 	// Or odr's value with a 1 shifted to the left by number
 	*odr |= (1<<state);
 	// turn on timer2 and interrupt
-	TIM2->CR1 = 1;
+//	TIM2->CR1 = 1;
 	TIM2->DIER |= (1<<1);
 }
 
-/*
- * set up pa15 to tim2
- * detects both rising and falling edge
- */
 void init_receivepin(){
 	//using pin A15 as our recieve pin (works with tim2)
 	// enable clock to GPIOA peripheral
