@@ -87,6 +87,13 @@ typedef struct {
 	uint32_t OR;
 } TIMx;
 
+typedef struct {
+	uint32_t CRTL;
+	uint32_t LOAD;
+	uint32_t VAL;
+	uint32_t CALIB;
+} SYSTick;
+
 
 
 
