@@ -32,6 +32,12 @@ void init_transmitter(){
 	// make sure the systick's off
 	systick->CTRL = (0<<0);
 
+	//set pin A13 for transmitting
+
+	//set pin A13 for output
+	GPIOA->MODER &= ~(0b11<<26);
+	GPIOA->MODER |= (0b10<<26);
+
 	//turn on Interrupt Enable
 	systick->CTRL = (1<<1);
 
@@ -42,7 +48,7 @@ void init_transmitter(){
 	systick->CTRL = (1<<0);
 
 }
-uint32_t transmit(char* message){
+void transmit(char* message){
 
 	//clear previous transmission message
 	clear_trans_message();
@@ -74,7 +80,7 @@ void SysTick_Handler(){
 	systick->CTRL = (0<<1);
 	//check that there's still a part of a message to transmit
 	if (max_size != 0){
-		// if message is fully transmitted
+		//If message is fully transmitted
 		if (current_bit == max_size){
 			max_size = 0;
 			current_output = 1;
@@ -89,7 +95,12 @@ void SysTick_Handler(){
 		}
 
 	}
-
+	if (current_output == 1){
+		GPIOA->ODR = b00;
+	} else {
+		GPIOA->ODR = b01;
+	}
 
 
 }
+
