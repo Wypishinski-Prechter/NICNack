@@ -28,6 +28,7 @@ int main(void){
 	init_receivepin();
 	// start timers
 	init_timers();
+	init_transmitter();
 
 	while(1){
 		// user interface
@@ -42,12 +43,23 @@ int main(void){
 		fgets(input, 99, stdin);
 
 		// tokenize
-		data = strtok(input, "\n");
+		command = strtok(input, " ");
+		data = strtok(NULL, "/n");
 
-		if(get_state() == IDLE){
-			//send to transmission
-		} else {
-			printf("%s\n", "Line is busy. Please try again later.");
+
+		if (!strcmp(command, "send")){
+			if(get_state() == IDLE){
+				if(!strcmp(data, "null")){
+					// send null to transmitter
+					char * null_string = "\0";
+					transmit(null_string);
+				} else {
+					//send to transmission
+					transmit(data);
+				}
+			} else {
+				printf("%s\n", "Line is busy. Please try again later.");
+			}
 		}
 
 	}
