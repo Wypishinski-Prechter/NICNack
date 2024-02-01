@@ -203,6 +203,9 @@ void init_receivepin(){
 int get_state(){
 	return state;
 }
+void set_state(int new_state){
+	state = new_state;
+}
 
 
 
