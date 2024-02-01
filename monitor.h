@@ -13,6 +13,7 @@ void init_leds();
 void init_timers();
 void init_receivepin();
 int get_state();
+void set_state(int new_state);
 
 
 #endif /* MONITOR_H_ */
