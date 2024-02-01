@@ -52,6 +52,8 @@ void transmit(char* message){
 
 	//clear previous transmission message
 	clear_trans_message();
+
+	set_state(BUSY);
 	//Place message into trans_message
 	int i = 0;
 	int j = 0;
@@ -84,6 +86,7 @@ void SysTick_Handler(){
 		if (current_bit == max_size){
 			max_size = 0;
 			current_output = 1;
+			set_state(IDLE);
 		} else {
 			int state = get_state();
 			if (state != COLLISION){
