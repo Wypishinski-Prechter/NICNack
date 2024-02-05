@@ -10,8 +10,10 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include "uart_driver.h"
 #include "monitor.h"
+#include "transmitter.h"
 
 #define F_CPU 16000000UL
 #define IDLE 5
@@ -43,13 +45,13 @@ int main(void){
 		fgets(input, 99, stdin);
 
 		// tokenize
-		command = strtok(input, " ");
+		char *command = strtok(input, " ");
 		data = strtok(NULL, "/n");
 
 
-		if (!strcmp(command, "send")){
+		if (!strcmp(command, "send") == 0){
 			if(get_state() == IDLE){
-				if(!strcmp(data, "null")){
+				if(!strcmp(data, "null") == 0){
 					// send null to transmitter
 					char * null_string = "\0";
 					transmit(null_string);
