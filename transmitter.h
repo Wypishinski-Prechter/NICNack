@@ -9,6 +9,7 @@
 #define TRANSMITTER_H_
 
 void init_transmitter();
-void transmit(char* message);
+void transmit(char* message, int length);
+void clear_trans_message();
 
 #endif

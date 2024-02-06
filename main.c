@@ -46,18 +46,19 @@ int main(void){
 
 		// tokenize
 		char *command = strtok(input, " ");
-		data = strtok(NULL, "/n");
+		data = strtok(NULL, "\n");
 
 
-		if (!strcmp(command, "send") == 0){
+
+		if (strcmp(command, "send") == 0){
 			if(get_state() == IDLE){
-				if(!strcmp(data, "null") == 0){
+				if(strcmp(data, "null") == 0){
 					// send null to transmitter
-					char * null_string = "\0";
-					transmit(null_string);
+					char* null_string = {0};
+					transmit(null_string, 1);
 				} else {
 					//send to transmission
-					transmit(data);
+					transmit(data, strlen(data));
 				}
 			} else {
 				printf("%s\n", "Line is busy. Please try again later.");
