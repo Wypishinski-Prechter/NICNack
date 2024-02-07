@@ -32,6 +32,8 @@ int main(void){
 	init_timers();
 	init_transmitter();
 
+	buffer buffer_m;
+
 	while(1){
 		// user interface
 		printf("%s\n", "Please enter a message you want to transmit.");
@@ -49,6 +51,21 @@ int main(void){
 		data = strtok(NULL, "\n");
 
 
+		// when receive is typed
+		if (strcmp(command,"receive")== 0){
+			// check that we aren't receiving
+			if(get_state()!= BUSY){
+				getbuffer(buffer_m);
+				// if we have a valid message
+				if(buffer_m->valid == 1){
+					printf(buffer_m->ascii_buffer);
+				} else {
+					printf("A message was corrupted\n");
+				}
+			} else {
+				printf("The receive line is busy!\n");
+			}
+		}
 
 		if (strcmp(command, "send") == 0){
 			if(get_state() == IDLE){
