@@ -57,14 +57,19 @@ int main(void){
 			if(get_state()!= BUSY){
 				getbuffer(buffer_m);
 				// if we have a valid message
-				if(buffer_m->valid == 1){
+				if((buffer_m->valid == 1) && (buffer_m->size != 0)){
 					printf(buffer_m->ascii_buffer);
+				} else if((buffer_m->valid == 0) && (buffer_m->size != 0)){
+					printf("A message was corrupted.\n");
+				} else if ((buffer_m ->valid == 2) && (buffer_m->size != 0)){
+					printf("A message has a bad preamble.\n");
 				} else {
-					printf("A message was corrupted\n");
+					printf("No new messages received.\n");
 				}
 			} else {
 				printf("The receive line is busy!\n");
 			}
+			clearbuffer();
 		}
 
 		if (strcmp(command, "send") == 0){
