@@ -28,6 +28,7 @@ static volatile RCCr* const RCC = (RCCr*)0x40023800;
 
 static volatile TIMx* const TIM2 = (TIMx*)0x40000000;
 static volatile TIMx* const TIM3 = (TIMx*)0x40000400;
+static volatile TIMx* const TIM4 = (TIMx*)0x40000800;
 
 static volatile uint32_t* const NVIC_ISER = (uint32_t*)0xE000E100;
 
@@ -35,6 +36,10 @@ static volatile GPIO* const GPIOA = (GPIO*)0x40020000;
 
 static int state = 0;
 static int pin15 = 0;
+
+static int prev_time = -1;
+static int prev_state = -1;
+static buffer buff;
 
 void init_leds(){
 	// enable clock to GPIOB peripheral
@@ -142,7 +147,35 @@ void TIM2_IRQHandler() {
 
 	//*odr = *odr & ~all_lights;
 
-	TIM2->CCR1;
+	int new_time = TIM2->CCR1;
+	if (prev_time == -1){
+		prev_time = new_time;
+	}
+
+	int time = new_time - prev_time;
+
+	//500 us +- 8000
+	if((7895 < time)&& (time < 8106)){
+		//do cool stuff
+	} else if((15790 < time)&&(time < 16212)){
+		// do other cool stuff
+	} else{
+		if(bits_read != 0 && bits_read !=16){
+					buffer.valid = 0;
+				}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
 	TIM2->DIER |= (1<<1);
 
 	// turn on timer
@@ -175,6 +208,9 @@ void TIM3_IRQHandler(){
 	// turn on timer2 and interrupt
 //	TIM2->CR1 = 1;
 	TIM2->DIER |= (1<<1);
+	if(bits_read != 0 && bits_read !=16){
+			buffer.valid = 0;
+		}
 }
 
 void init_receivepin(){
@@ -183,7 +219,8 @@ void init_receivepin(){
 	uint32_t *ahb1enr = (uint32_t*)rcc_ahb1enr;
 	*ahb1enr |= GPIOAEN;
 	// set A15 to input- rmw
-	GPIOA->MODER &= ~(0b11<<30);
+	GPIOA->MODER &= ~(0b11<<30 );
+
 	//read pin: initial capture of wave
 	pin15 = (GPIOA->IDR >> 15);
 	state = BUSY;
@@ -203,9 +240,14 @@ void init_receivepin(){
 int get_state(){
 	return state;
 }
+
 void set_state(int new_state){
 	state = new_state;
+	uint32_t *odr = (uint32_t*)gpiob_odr;
+	// clear the LED lights
+	*odr = *odr & ~all_lights;
+	// Or odr's value with a 1 shifted to the left by number
+	*odr |= (1<<state);
 }
-
 
 

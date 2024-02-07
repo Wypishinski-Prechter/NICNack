@@ -8,6 +8,10 @@
 #ifndef MONITOR_H_
 #define MONITOR_H_
 
+typedef struct{
+	char* ascii_buffer[100];
+	int valid = 1;
+} buffer;
 
 void init_leds();
 void init_timers();
