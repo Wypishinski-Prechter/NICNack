@@ -38,8 +38,13 @@ static int state = 0;
 static int pin15 = 0;
 
 static int prev_time = -1;
-static int prev_state = -1;
+static int prev_pin = -1;
 static buffer buff;
+
+static int bad_pre = 2;
+static int valid = 1;
+static int bad_read = 0;
+
 
 void init_leds(){
 	// enable clock to GPIOB peripheral
@@ -113,6 +118,7 @@ void init_timers(){
 
 
 void TIM2_IRQHandler() {
+	static int raw_data[16];
 	// clear isr flag
 	TIM2->SR = 0;
 
@@ -129,12 +135,16 @@ void TIM2_IRQHandler() {
 	GPIOA->MODER &= ~(0b11<<30);
 	//read pin: initial capture of wave
 	pin15 = (GPIOA->IDR >> 15);
+	if(prev_state = -1){
+		prev_state = pin15;
+	}
+
 	// change to alt function mode
 	GPIOA->MODER &= ~(0b11<<30);
 	GPIOA->MODER |= (0b10<<30);
-
 	GPIOA->AFRH &= ~(0b1111<<28);
 	GPIOA->AFRH |= (0b01<<28);
+
 	// set state to busy, edge is found
 	state = BUSY;
 	// write number to PB5 - PB15 (skipping PB11)
@@ -153,28 +163,47 @@ void TIM2_IRQHandler() {
 	}
 
 	int time = new_time - prev_time;
+	if(buff.pre == -1 && bit_read == 0){
+		raw_data[0] = 1;
+		bit_read = 1;
+	}
 
-	//500 us +- 8000
+	if(bits_read == 0 && buff.size == 0){
+		raw_data[1] = pin15;
+		prev_pin = pin15;
+	}
+
+	//500 us +- 1.32%
 	if((7895 < time)&& (time < 8106)){
 		//do cool stuff
+
 	} else if((15790 < time)&&(time < 16212)){
 		// do other cool stuff
 	} else{
-		if(bits_read != 0 && bits_read !=16){
+		if(bits_read != 0 && bits_read !=16 && prev_pin != pin15){
 					buffer.valid = 0;
 				}
 	}
 
+	if(bit_read == 16){
+		int ascii_conv = 0;
+		for(int i = 1; i < 16; i+=2){
+			ascii_conv |= i;
+			ascii_conv = ascii_conv << 1;
+		}
 
+		if(buff.pre == 1){
+			buff.ascci_buff[size] = ascii_conv;
+			size++;
+		}
 
-
-
-
-
-
-
-
-
+		if(buff.pre == -1 && ascii_conv != 'U'){
+			buff.valid = bad_pre;
+			buff.pre = 0;
+		} else if (buff.pre == -1 && ascii_conv == 'U'){
+			buff.pre = 1;
+		}
+	}
 
 	TIM2->DIER |= (1<<1);
 
@@ -248,6 +277,10 @@ void set_state(int new_state){
 	*odr = *odr & ~all_lights;
 	// Or odr's value with a 1 shifted to the left by number
 	*odr |= (1<<state);
+}
+
+buffer get_buffer(){
+	return buff;
 }
 
 
