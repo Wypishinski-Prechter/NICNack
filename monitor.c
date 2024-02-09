@@ -28,7 +28,6 @@ static volatile RCCr* const RCC = (RCCr*)0x40023800;
 
 static volatile TIMx* const TIM2 = (TIMx*)0x40000000;
 static volatile TIMx* const TIM3 = (TIMx*)0x40000400;
-static volatile TIMx* const TIM4 = (TIMx*)0x40000800;
 
 static volatile uint32_t* const NVIC_ISER = (uint32_t*)0xE000E100;
 
@@ -36,15 +35,19 @@ static volatile GPIO* const GPIOA = (GPIO*)0x40020000;
 
 static int state = 0;
 static int pin15 = 0;
-
-static int prev_time = -1;
 static int prev_pin = -1;
+static int prev_state;
+static uint32_t prev_time = 0;
 static buffer buff;
 
+static int bits_read = 0;
+
+static int buff_full = 3;
 static int bad_pre = 2;
 static int valid = 1;
 static int bad_read = 0;
 
+static int max_size = 100;
 
 void init_leds(){
 	// enable clock to GPIOB peripheral
@@ -135,9 +138,6 @@ void TIM2_IRQHandler() {
 	GPIOA->MODER &= ~(0b11<<30);
 	//read pin: initial capture of wave
 	pin15 = (GPIOA->IDR >> 15);
-	if(prev_state = -1){
-		prev_state = pin15;
-	}
 
 	// change to alt function mode
 	GPIOA->MODER &= ~(0b11<<30);
@@ -147,6 +147,7 @@ void TIM2_IRQHandler() {
 
 	// set state to busy, edge is found
 	state = BUSY;
+	prev_state = 0;
 	// write number to PB5 - PB15 (skipping PB11)
 	uint32_t *odr = (uint32_t*)gpiob_odr;
 	// clear the LED lights
@@ -157,52 +158,65 @@ void TIM2_IRQHandler() {
 
 	//*odr = *odr & ~all_lights;
 
-	int new_time = TIM2->CCR1;
-	if (prev_time == -1){
+	uint32_t new_time = TIM2->CCR1;
+
+	if(prev_state == -1){
+		buff.size = 0;
+		buff.valid = 1;
+		buff.pre = -1;
+		raw_data[bits_read++] = 1;
+		raw_data[bits_read++] = pin15;
+		prev_pin = pin15;
 		prev_time = new_time;
 	}
 
-	int time = new_time - prev_time;
-	if(buff.pre == -1 && bit_read == 0){
-		raw_data[0] = 1;
-		bit_read = 1;
-	}
-
-	if(bits_read == 0 && buff.size == 0){
-		raw_data[1] = pin15;
-		prev_pin = pin15;
-	}
+	uint32_t time = 0;
+	if(new_time - prev_time > 0){
+		time = new_time - prev_time;
+		prev_time = new_time;
+	}else{
+		time = prev_time - new_time;
+		prev_time = new_time;
+		}
 
 	//500 us +- 1.32%
-	if((7895 < time)&& (time < 8106)){
-		//do cool stuff
-
-	} else if((15790 < time)&&(time < 16212)){
-		// do other cool stuff
-	} else{
-		if(bits_read != 0 && bits_read !=16 && prev_pin != pin15){
-					buffer.valid = 0;
+	if(buff.valid == valid && time > 0){
+		// short time between edges
+		if((7895 < time) && (time < 8106)){
+			raw_data[bits_read++] = pin15;
+			prev_pin = pin15;
+			//Long time between edge
+		} else if((15790 < time) && (time < 16212)){
+			raw_data[bits_read++] = prev_pin;
+			raw_data[bits_read++] = pin15;
+			prev_pin = pin15;
+		} else{
+			if(bits_read != 0 && bits_read !=16 && prev_pin != pin15){
+					buff.valid = bad_read;
 				}
+		}
 	}
 
-	if(bit_read == 16){
+	if(bits_read == 16){
 		int ascii_conv = 0;
-		for(int i = 1; i < 16; i+=2){
-			ascii_conv |= i;
+		for(int i = 1; i < 15; i+=2){
+			ascii_conv |= raw_data[i];
 			ascii_conv = ascii_conv << 1;
 		}
 
-		if(buff.pre == 1){
-			buff.ascci_buff[size] = ascii_conv;
-			size++;
+		if(buff.pre == 1 && buff.size != max_size){
+			buff.ascii_buff[buff.size++] = (char)ascii_conv;
+		} else if (buff.size == max_size){
+			buff.valid = buff_full;
 		}
 
-		if(buff.pre == -1 && ascii_conv != 'U'){
+		if(buff.pre == -1 && (char)ascii_conv != 'U'){
 			buff.valid = bad_pre;
 			buff.pre = 0;
-		} else if (buff.pre == -1 && ascii_conv == 'U'){
+		} else if (buff.pre == -1 && (char)ascii_conv == 'U'){
 			buff.pre = 1;
 		}
+		bits_read = 0;
 	}
 
 	TIM2->DIER |= (1<<1);
@@ -220,6 +234,13 @@ void TIM3_IRQHandler(){
 	// turn off both isrs
 	TIM3->DIER &= ~(1);
 	TIM2->DIER &= ~(1<<1);
+
+	if(bits_read != 0 && bits_read !=16){
+		buff.valid = bad_read;
+		bits_read = 0;
+	}
+	prev_state = -1;
+
 	// turn off timer
     //	TIM2->CR1 = 0;
 	// check pin for high or low
@@ -237,9 +258,7 @@ void TIM3_IRQHandler(){
 	// turn on timer2 and interrupt
 //	TIM2->CR1 = 1;
 	TIM2->DIER |= (1<<1);
-	if(bits_read != 0 && bits_read !=16){
-			buffer.valid = 0;
-		}
+
 }
 
 void init_receivepin(){
@@ -281,6 +300,12 @@ void set_state(int new_state){
 
 buffer get_buffer(){
 	return buff;
+}
+
+void clear_buffer(){
+	buff.size = 0;
+	buff.valid = 1;
+	buff.pre = -1;
 }
 
 
