@@ -31,6 +31,7 @@ int main(void){
 	// start timers
 	init_timers();
 	init_transmitter();
+	clear_buffer();
 
 	buffer buffer_m;
 
@@ -47,7 +48,7 @@ int main(void){
 		fgets(input, 99, stdin);
 
 		// tokenize
-		char *command = strtok(input, " ");
+		char *command = strtok(input, " \n");
 		data = strtok(NULL, "\n");
 
 
@@ -55,22 +56,23 @@ int main(void){
 		if (strcmp(command,"receive")== 0){
 			// check that we aren't receiving
 			if(get_state()!= BUSY){
-				getbuffer(buffer_m);
+				buffer_m = get_buffer();
 				// if we have a valid message
-				if((buffer_m->valid == 1) && (buffer_m->size != 0)){
-					printf(buffer_m->ascii_buffer);
-				} else if((buffer_m->valid == 0) && (buffer_m->size != 0)){
-					printf("A message was corrupted.\n");
-				} else if ((buffer_m ->valid == 2) && (buffer_m->size != 0)){
-					printf("A message has a bad preamble.\n");
+				if((buffer_m.valid == 1) && (buffer_m.size != 0)){
+					printf("%s\n", buffer_m.ascii_buff);
+				}  else if ((buffer_m.valid == 2)){
+					printf("A message has a bad preamble 0f 0X%x \n", buffer_m.ascii_buff[0]);
+				}else if(buffer_m.size != 0 && buffer_m.valid == 3){
+						printf("%s\n", buffer_m.ascii_buff);
+						printf("The message was to long the end was cut off\n");
+					}
 				} else {
 					printf("No new messages received.\n");
 				}
+				clear_buffer();
 			} else {
 				printf("The receive line is busy!\n");
 			}
-			clearbuffer();
-		}
 
 		if (strcmp(command, "send") == 0){
 			if(get_state() == IDLE){
@@ -94,4 +96,3 @@ int main(void){
 
 	return 0;
 }
-

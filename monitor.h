@@ -9,10 +9,11 @@
 #define MONITOR_H_
 
 typedef struct{
-	char* ascii_buff[100];
-	int valid = 1;
-	int size = 0;
-	int pre_amble = 0;
+	char ascii_buff[100];
+	int valid;
+	int size;
+	int pre;
+	int init;
 } buffer;
 
 void init_leds();
@@ -20,6 +21,7 @@ void init_timers();
 void init_receivepin();
 int get_state();
 void set_state(int new_state);
+void clear_buffer();
 buffer get_buffer();
 
 

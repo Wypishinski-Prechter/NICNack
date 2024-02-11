@@ -36,7 +36,7 @@ static volatile GPIO* const GPIOA = (GPIO*)0x40020000;
 static int state = 0;
 static int pin15 = 0;
 static int prev_pin = -1;
-static int prev_state;
+static int prev_state = -1;
 static uint32_t prev_time = 0;
 static buffer buff;
 
@@ -45,9 +45,8 @@ static int bits_read = 0;
 static int buff_full = 3;
 static int bad_pre = 2;
 static int valid = 1;
-static int bad_read = 0;
 
-static int max_size = 100;
+static int max = 100;
 
 void init_leds(){
 	// enable clock to GPIOB peripheral
@@ -114,9 +113,6 @@ void init_timers(){
 	TIM3->ARR = 18112;
 	TIM3->CCR1 = 1 + (capture_time);
 	TIM3->CR1  = 1;
-
-
-
 }
 
 
@@ -147,7 +143,6 @@ void TIM2_IRQHandler() {
 
 	// set state to busy, edge is found
 	state = BUSY;
-	prev_state = 0;
 	// write number to PB5 - PB15 (skipping PB11)
 	uint32_t *odr = (uint32_t*)gpiob_odr;
 	// clear the LED lights
@@ -160,14 +155,17 @@ void TIM2_IRQHandler() {
 
 	uint32_t new_time = TIM2->CCR1;
 
-	if(prev_state == -1){
+	if(bits_read == 0 && prev_state == -1 && buff.init == -1 && buff.size < max){
 		buff.size = 0;
+		buff.init  = 1;
 		buff.valid = 1;
 		buff.pre = -1;
-		raw_data[bits_read++] = 1;
-		raw_data[bits_read++] = pin15;
+		raw_data[0] = 1;
+		raw_data[1] = 0;
+		bits_read = 2;
 		prev_pin = pin15;
 		prev_time = new_time;
+		prev_state = 1;
 	}
 
 	uint32_t time = 0;
@@ -180,40 +178,41 @@ void TIM2_IRQHandler() {
 		}
 
 	//500 us +- 1.32%
-	if(buff.valid == valid && time > 0){
+	if(buff.valid == valid){
 		// short time between edges
 		if((7895 < time) && (time < 8106)){
-			raw_data[bits_read++] = pin15;
+			raw_data[bits_read++] = prev_pin;
 			prev_pin = pin15;
 			//Long time between edge
 		} else if((15790 < time) && (time < 16212)){
-			raw_data[bits_read++] = prev_pin;
 			raw_data[bits_read++] = pin15;
+			raw_data[bits_read++] = prev_pin;
 			prev_pin = pin15;
-		} else{
-			if(bits_read != 0 && bits_read !=16 && prev_pin != pin15){
-					buff.valid = bad_read;
-				}
 		}
 	}
 
 	if(bits_read == 16){
 		int ascii_conv = 0;
-		for(int i = 1; i < 15; i+=2){
+		for(int i = 1; i < 16; i+=2){
 			ascii_conv |= raw_data[i];
-			ascii_conv = ascii_conv << 1;
+
+			//skips the last shift
+			if(i < 15){
+				ascii_conv = ascii_conv << 1;
+			}
 		}
 
-		if(buff.pre == 1 && buff.size != max_size){
+		if(buff.pre == 1 && buff.size != max){
 			buff.ascii_buff[buff.size++] = (char)ascii_conv;
-		} else if (buff.size == max_size){
+		} else if (buff.size == max){
 			buff.valid = buff_full;
 		}
 
-		if(buff.pre == -1 && (char)ascii_conv != 'U'){
+		if(buff.pre == -1 && ascii_conv != 0x55){
+			buff.ascii_buff[buff.size++] = (char)ascii_conv;
 			buff.valid = bad_pre;
 			buff.pre = 0;
-		} else if (buff.pre == -1 && (char)ascii_conv == 'U'){
+		} else if (buff.pre == -1 && ascii_conv == 0x55){
 			buff.pre = 1;
 		}
 		bits_read = 0;
@@ -235,11 +234,10 @@ void TIM3_IRQHandler(){
 	TIM3->DIER &= ~(1);
 	TIM2->DIER &= ~(1<<1);
 
-	if(bits_read != 0 && bits_read !=16){
-		buff.valid = bad_read;
-		bits_read = 0;
-	}
-	prev_state = -1;
+	if(buff.init != -1){
+		prev_state = -1;
+		buff.init = -1;
+		}
 
 	// turn off timer
     //	TIM2->CR1 = 0;
@@ -303,7 +301,7 @@ buffer get_buffer(){
 }
 
 void clear_buffer(){
-	buff.size = 0;
+	buff.size = -1;
 	buff.valid = 1;
 	buff.pre = -1;
 }
