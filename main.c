@@ -58,14 +58,13 @@ int main(void){
 			if(get_state()!= BUSY){
 				buffer_m = get_buffer();
 				// if we have a valid message
-				if((buffer_m.valid == 1) && (buffer_m.size != 0)){
+				if((buffer_m.valid == 1) && (buffer_m.size != -1)){
 					printf("%s\n", buffer_m.ascii_buff);
 				}  else if ((buffer_m.valid == 2)){
 					printf("A message has a bad preamble 0f 0X%x \n", buffer_m.ascii_buff[0]);
-				}else if(buffer_m.size != 0 && buffer_m.valid == 3){
+				} else if(buffer_m.size != -1 && buffer_m.valid == 3){
 						printf("%s\n", buffer_m.ascii_buff);
 						printf("The message was to long the end was cut off\n");
-					}
 				} else {
 					printf("No new messages received.\n");
 				}
@@ -73,6 +72,7 @@ int main(void){
 			} else {
 				printf("The receive line is busy!\n");
 			}
+		}
 
 		if (strcmp(command, "send") == 0){
 			if(get_state() == IDLE){
