@@ -45,7 +45,7 @@ static int bits_read = 0;
 static int buff_full = 3;
 static int bad_pre = 2;
 static int valid = 1;
-
+static int time;
 static int max = 100;
 
 void init_leds(){
@@ -111,7 +111,7 @@ void init_timers(){
 	int capture_time = TIM3->CNT;
 	//set TIM3 CCR1 and ARR here
 	TIM3->ARR = 18112;
-	TIM3->CCR1 = 1 + (capture_time);
+	TIM3->CCR1 = 18112;
 	TIM3->CR1  = 1;
 }
 
@@ -148,6 +148,8 @@ void TIM2_IRQHandler() {
 	// clear the LED lights
 	*odr = *odr & ~all_lights;
 	// Or odr's value with a 1 shifted to the left by number
+	*odr |= (pin15 << 15);
+
 	*odr |= (1<<state);
 	//*odr |= (1<<8);
 
@@ -155,7 +157,7 @@ void TIM2_IRQHandler() {
 
 	uint32_t new_time = TIM2->CCR1;
 
-	if(bits_read == 0 && prev_state == -1 && buff.init == -1 && buff.size < max){
+	if(buff.init == -1){
 		buff.size = 0;
 		buff.init  = 1;
 		buff.valid = 1;
@@ -168,14 +170,13 @@ void TIM2_IRQHandler() {
 		prev_state = 1;
 	}
 
-	uint32_t time = 0;
-	if(new_time - prev_time > 0){
-		time = new_time - prev_time;
-		prev_time = new_time;
-	}else{
-		time = prev_time - new_time;
-		prev_time = new_time;
-		}
+	time = 0;
+	if (new_time >= prev_time) {
+	       time = new_time - prev_time;
+	   } else {
+	        time = (0xFFFFFFFF - prev_time) + new_time;
+	   }
+	    prev_time = new_time;
 
 	//500 us +- 1.32%
 	if(buff.valid == valid){
@@ -183,6 +184,7 @@ void TIM2_IRQHandler() {
 		if((7895 < time) && (time < 8106)){
 			raw_data[bits_read++] = prev_pin;
 			prev_pin = pin15;
+
 			//Long time between edge
 		} else if((15790 < time) && (time < 16212)){
 			raw_data[bits_read++] = pin15;
@@ -206,9 +208,7 @@ void TIM2_IRQHandler() {
 			buff.ascii_buff[buff.size++] = (char)ascii_conv;
 		} else if (buff.size == max){
 			buff.valid = buff_full;
-		}
-
-		if(buff.pre == -1 && ascii_conv != 0x55){
+		}else if(buff.pre == -1 && ascii_conv != 0x55){
 			buff.ascii_buff[buff.size++] = (char)ascii_conv;
 			buff.valid = bad_pre;
 			buff.pre = 0;
@@ -230,6 +230,7 @@ void TIM3_IRQHandler(){
 	//set CCER = 1
 	// clear isr flag
 	TIM3->SR &= 0;
+
 	// turn off both isrs
 	TIM3->DIER &= ~(1);
 	TIM2->DIER &= ~(1<<1);

@@ -26,11 +26,11 @@ int main(void){
 	init_usart2(57600,F_CPU);
 	// init LEDs
 	init_leds();
+	init_transmitter();
 	// init PA15 to timer and get first input
 	init_receivepin();
 	// start timers
 	init_timers();
-	init_transmitter();
 	clear_buffer();
 
 	buffer buffer_m;
@@ -49,22 +49,22 @@ int main(void){
 
 		// tokenize
 		char *command = strtok(input, " \n");
-		data = strtok(NULL, "\n");
+		data = strtok(NULL, " \n");
 
 
 		// when receive is typed
-		if (strcmp(command,"receive")== 0){
+		if (strcmp(command,"r")== 0){
 			// check that we aren't receiving
 			if(get_state()!= BUSY){
 				buffer_m = get_buffer();
 				// if we have a valid message
-				if((buffer_m.valid == 1) && (buffer_m.size != -1)){
+				if((buffer_m.valid == 1) && ((buffer_m.size != -1) && (buffer_m.size != 0))){
 					printf("%s\n", buffer_m.ascii_buff);
 				}  else if ((buffer_m.valid == 2)){
-					printf("A message has a bad preamble 0f 0X%x \n", buffer_m.ascii_buff[0]);
-				} else if(buffer_m.size != -1 && buffer_m.valid == 3){
+					printf("A message had a bad preamble of 0X%x \n", buffer_m.ascii_buff[0]);
+				} else if((buffer_m.size != -1) && ((buffer_m.size != 0) && (buffer_m.valid == 3))){
 						printf("%s\n", buffer_m.ascii_buff);
-						printf("The message was to long the end was cut off\n");
+						printf("The message was too long, the end was cut off\n");
 				} else {
 					printf("No new messages received.\n");
 				}
@@ -90,9 +90,6 @@ int main(void){
 		}
 
 	}
-
-	// never return
-	for(;;){}
 
 	return 0;
 }
