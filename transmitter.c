@@ -44,6 +44,8 @@ void init_transmitter(){
 	//turn on Interrupt Enable
 	systick->CTRL |= (1<<1) |(1<<2);
 
+	GPIOB->ODR |= (1<<3);
+
 	//load the systick with 0.5 ms
 	systick->LOAD = (half_ms -1);
 
@@ -98,6 +100,8 @@ void SysTick_Handler(){
 					current_bit++;
 				}
 				systick->CTRL |= (3);
+			} else {
+				current_output = 1;
 			}
 		}
 		if (current_output == 1){

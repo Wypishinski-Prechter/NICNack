@@ -111,7 +111,7 @@ void init_timers(){
 	int capture_time = TIM3->CNT;
 	//set TIM3 CCR1 and ARR here
 	TIM3->ARR = 18112;
-	TIM3->CCR1 = 18112;
+	TIM3->CCR1 = 1 + capture_time;
 	TIM3->CR1  = 1;
 }
 
