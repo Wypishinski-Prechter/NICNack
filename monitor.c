@@ -41,6 +41,7 @@ static uint32_t prev_time = 0;
 static buffer buff;
 
 static int bits_read = 0;
+static int raw_data[16];
 
 static int buff_full = 3;
 static int bad_pre = 2;
@@ -117,7 +118,6 @@ void init_timers(){
 
 
 void TIM2_IRQHandler() {
-	static int raw_data[16];
 	// clear isr flag
 	TIM2->SR = 0;
 
@@ -133,7 +133,7 @@ void TIM2_IRQHandler() {
 	// set A15 to input- rmw
 	GPIOA->MODER &= ~(0b11<<30);
 	//read pin: initial capture of wave
-	pin15 = (GPIOA->IDR >> 15);
+	pin15 = (GPIOA->IDR >> 15) & 1;
 
 	// change to alt function mode
 	GPIOA->MODER &= ~(0b11<<30);
@@ -148,8 +148,6 @@ void TIM2_IRQHandler() {
 	// clear the LED lights
 	*odr = *odr & ~all_lights;
 	// Or odr's value with a 1 shifted to the left by number
-	*odr |= (pin15 << 15);
-
 	*odr |= (1<<state);
 	//*odr |= (1<<8);
 
@@ -181,14 +179,16 @@ void TIM2_IRQHandler() {
 	//500 us +- 1.32%
 	if(buff.valid == valid){
 		// short time between edges
-		if((7895 < time) && (time < 8106)){
-			raw_data[bits_read++] = prev_pin;
+		if((7800 < time) && (time < 9000)){
+			raw_data[bits_read] = pin15;
+			bits_read++;
 			prev_pin = pin15;
-
 			//Long time between edge
-		} else if((15790 < time) && (time < 16212)){
-			raw_data[bits_read++] = pin15;
-			raw_data[bits_read++] = prev_pin;
+		} else if((15500 < time) && (time < 17500)){
+			raw_data[bits_read] = pin15;
+			bits_read++;
+			raw_data[bits_read] = prev_pin;
+			bits_read++;
 			prev_pin = pin15;
 		}
 	}
@@ -269,7 +269,7 @@ void init_receivepin(){
 	GPIOA->MODER &= ~(0b11<<30 );
 
 	//read pin: initial capture of wave
-	pin15 = (GPIOA->IDR >> 15);
+	pin15 = (GPIOA->IDR >> 15) & 1;
 	state = BUSY;
 	// write number to PB5 - PB15 (skipping PB11)
 	uint32_t *odr = (uint32_t*)gpiob_odr;
@@ -305,6 +305,9 @@ void clear_buffer(){
 	buff.size = -1;
 	buff.valid = 1;
 	buff.pre = -1;
+	for (int i = 0; i < 100; i++){
+		buff.ascii_buff[i] = 0;
+	}
 }
 
 

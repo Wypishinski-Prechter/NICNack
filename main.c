@@ -61,7 +61,7 @@ int main(void){
 				if((buffer_m.valid == 1) && ((buffer_m.size != -1) && (buffer_m.size != 0))){
 					printf("%s\n", buffer_m.ascii_buff);
 				}  else if ((buffer_m.valid == 2)){
-					printf("A message had a bad preamble of 0X%x \n", buffer_m.ascii_buff[0]);
+					printf("A message had a bad preamble\n");
 				} else if((buffer_m.size != -1) && ((buffer_m.size != 0) && (buffer_m.valid == 3))){
 						printf("%s\n", buffer_m.ascii_buff);
 						printf("The message was too long, the end was cut off\n");

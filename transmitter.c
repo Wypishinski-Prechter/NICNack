@@ -54,11 +54,11 @@ void transmit(char* message, int length){
 
 	//clear previous transmission message
 	clear_trans_message();
-
+	clear_buffer();
 	set_state(BUSY);
 	//Place message into trans_message
 	int count = 0;
-	for (int i = 0; i < length; i++){
+	for (int i = 0; i < length + 1; i++){
 		char character = message[i];
 		//convert character to binary
 		for (int j = 0; j < 8; j++){
