@@ -51,7 +51,7 @@ void init_transmitter(){
 	systick->LOAD = (half_ms -1);
 
 }
-void transmit(char* message, int length){
+void transmit(char* message, int address, int length){
 
 	//clear previous transmission message
 	clear_trans_message();
@@ -72,19 +72,9 @@ void transmit(char* message, int length){
 		}
 	}
 	// adding sender address
-	character = '3';
+	int sending_address = 0x3C;
 	for (int i = 0; i < 8; i++){
-		if (((character >> (7-i)) & 1) == 1){
-				trans_message[count++] = 0;
-				trans_message[count++] = 1;
-		} else {
-				trans_message[count++] = 1;
-				trans_message[count++] = 0;
-		}
-	}
-	character = 'C';
-	for (int i = 0; i < 8; i++){
-		if (((character >> (7-i)) & 1) == 1){
+		if (((sending_address >> (7-i)) & 1) == 1){
 				trans_message[count++] = 0;
 				trans_message[count++] = 1;
 		} else {
@@ -93,9 +83,8 @@ void transmit(char* message, int length){
 		}
 	}
 	// adding receive address
-	character = '3';
 	for (int i = 0; i < 8; i++){
-		if (((character >> (7-i)) & 1) == 1){
+		if (((address >> (7-i)) & 1) == 1){
 				trans_message[count++] = 0;
 				trans_message[count++] = 1;
 		} else {
@@ -103,16 +92,7 @@ void transmit(char* message, int length){
 				trans_message[count++] = 0;
 		}
 	}
-	character = 'C';
-		for (int i = 0; i < 8; i++){
-			if (((character >> (7-i)) & 1) == 1){
-					trans_message[count++] = 0;
-					trans_message[count++] = 1;
-			} else {
-					trans_message[count++] = 1;
-					trans_message[count++] = 0;
-			}
-		}
+
 	// adding the length
 	int str_length = length;
 	for (int i = 0; i < 8; i++){
