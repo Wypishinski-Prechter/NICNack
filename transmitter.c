@@ -23,7 +23,7 @@ static volatile GPIO* const GPIOB = (GPIO*)0x40020400;
 static volatile SYSTick* const systick = (SYSTick*)0xE000E010;
 
 static volatile int current_bit = 0;
-static volatile int trans_message[808];
+static volatile int trans_message[888];
 static volatile int max_size = 0;
 
 static volatile int current_output = 1;
@@ -63,8 +63,7 @@ void transmit(char* message, int length){
 	// adding preamble in (U = 0x55)
 	char character = 'U';
 	for (int i = 0; i < 8; i++){
-		int j= 0;
-		if (((character >> (7-j)) & 1) == 1){
+		if (((character >> (7-i)) & 1) == 1){
 				trans_message[count++] = 0;
 				trans_message[count++] = 1;
 		} else {
@@ -72,6 +71,72 @@ void transmit(char* message, int length){
 				trans_message[count++] = 0;
 		}
 	}
+	// adding sender address
+	character = '3';
+	for (int i = 0; i < 8; i++){
+		if (((character >> (7-i)) & 1) == 1){
+				trans_message[count++] = 0;
+				trans_message[count++] = 1;
+		} else {
+				trans_message[count++] = 1;
+				trans_message[count++] = 0;
+		}
+	}
+	character = 'C';
+	for (int i = 0; i < 8; i++){
+		if (((character >> (7-i)) & 1) == 1){
+				trans_message[count++] = 0;
+				trans_message[count++] = 1;
+		} else {
+				trans_message[count++] = 1;
+				trans_message[count++] = 0;
+		}
+	}
+	// adding receive address
+	character = '3';
+	for (int i = 0; i < 8; i++){
+		if (((character >> (7-i)) & 1) == 1){
+				trans_message[count++] = 0;
+				trans_message[count++] = 1;
+		} else {
+				trans_message[count++] = 1;
+				trans_message[count++] = 0;
+		}
+	}
+	character = 'C';
+		for (int i = 0; i < 8; i++){
+			if (((character >> (7-i)) & 1) == 1){
+					trans_message[count++] = 0;
+					trans_message[count++] = 1;
+			} else {
+					trans_message[count++] = 1;
+					trans_message[count++] = 0;
+			}
+		}
+	// adding the length
+	int str_length = length;
+	for (int i = 0; i < 8; i++){
+		if (((str_length >> (7-i)) & 1) == 1){
+				trans_message[count++] = 0;
+				trans_message[count++] = 1;
+		} else {
+				trans_message[count++] = 1;
+				trans_message[count++] = 0;
+		}
+	}
+
+	// adding CRC flag
+	int flag = 0x00;
+	for (int i = 0; i < 8; i++){
+		if (((flag >> (7-i)) & 1) == 1){
+				trans_message[count++] = 0;
+				trans_message[count++] = 1;
+		} else {
+				trans_message[count++] = 1;
+				trans_message[count++] = 0;
+		}
+	}
+
 	// adding in message
 	for (int i = 0; i < length; i++){
 		character = message[i];
@@ -86,13 +151,25 @@ void transmit(char* message, int length){
 			}
 		}
 	}
+	// adding CRC field
+	int CRC_field = 0xAA;
+	for (int i = 0; i < 8; i++){
+		if (((CRC_field >> (7-i)) & 1) == 1){
+				trans_message[count++] = 0;
+				trans_message[count++] = 1;
+		} else {
+				trans_message[count++] = 1;
+				trans_message[count++] = 0;
+		}
+		}
+
 	max_size = count;
 	systick->CTRL |= (3);
 
 }
 // clears the trans_message array
 void clear_trans_message(){
-	for (int i = 0; i < 808; i++){
+	for (int i = 0; i < 888; i++){
 		trans_message[i] = 0;
 	}
 }
