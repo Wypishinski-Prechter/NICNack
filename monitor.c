@@ -45,9 +45,11 @@ static int raw_data[16];
 
 static int buff_full = 3;
 static int bad_pre = 2;
+static int not_for_us = 0;
 static int valid = 1;
 static int time;
-static int max = 100;
+static int const our_ip = 0x55;
+static int max = 255;
 
 void init_leds(){
 	// enable clock to GPIOB peripheral
@@ -160,6 +162,12 @@ void TIM2_IRQHandler() {
 		buff.init  = 1;
 		buff.valid = 1;
 		buff.pre = -1;
+		buff.sor = -1;
+		buff.dest = -1;
+		buff.len = -1;
+		buff.crc = -1;
+		buff.trail = -1;
+
 		raw_data[0] = 1;
 		raw_data[1] = 0;
 		bits_read = 2;
@@ -204,7 +212,42 @@ void TIM2_IRQHandler() {
 			}
 		}
 
+
 		if(buff.pre == 1 && buff.size != max){
+			if(buff.sor == -1){
+				buff.sor = ascii_conv;
+			}else {
+				if (buff.dest  == -1){
+					buff.dest = ascii_conv;
+				}else if(buff.dest != our_ip){
+					buff.valid = not_for_us;
+				} else {
+					if(buff.len == -1){
+						buff.len = ascii_conv;
+					} else{
+						if(buff.crc == -1){
+							if(ascii_conv == 1 || ascii_conv == 0){
+								buff.crc = ascii_conv;
+							}else{
+								buff.valid = bad_pre;
+							}
+						}else{
+							if(buff.size <= buff.len){
+								buff.ascii_buff[buff.size] = ascii_conv;
+								buff.size++;
+							}else{
+								if(buff.crc == 1){
+									if(buff.trail == -1){
+										buff.trail = ascii_conv;
+									}
+								} else{
+									buff.valid = buff_full;
+								}
+							}
+						}
+					}
+				}
+			}
 			buff.ascii_buff[buff.size++] = (char)ascii_conv;
 		} else if (buff.size == max){
 			buff.valid = buff_full;

@@ -9,10 +9,15 @@
 #define MONITOR_H_
 
 typedef struct{
-	char ascii_buff[100];
+	char ascii_buff[255];
 	int valid;
 	int size;
 	int pre;
+	int dest;
+	int sor;
+	int len;
+	int crc;
+	int trail;
 	int init;
 } buffer;
 
