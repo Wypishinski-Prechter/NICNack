@@ -78,19 +78,24 @@ int main(void){
 		}
 
 		if (strcmp(command, "send") == 0){
-			if(get_state() == IDLE){
-				//testing
-				if(strcmp(data, "null") == 0){
-					// send null to transmitter
-					char* null_string = {0};
-					transmit(null_string,address, 1);
-				} else {
-
-					//send to transmission
-					transmit(data,address, strlen(data));
-				}
+			if (address == 0){
+				printf("Please use a valid address\n");
 			} else {
-				printf("%s\n", "Line is busy. Please try again later.");
+				if(get_state() == IDLE){
+					//testing
+					if(strcmp(data, "null") == 0){
+						// send null to transmitter
+						char* null_string = {0};
+						transmit(null_string,address, 1);
+					} else {
+
+						//send to transmission
+						transmit(data,address, strlen(data));
+					}
+				} else {
+					printf("%s\n", "Line is busy. Please try again later.");
+
+				}
 			}
 		}
 
