@@ -88,7 +88,10 @@ int main(void){
 				printf("%s\n", "Line is busy. Please try again later.");
 			}
 		}
-
+		// check if retransmission failed
+		if (get_failed_status){
+			printf("%s", "Transmission failed.\n");
+		}
 	}
 
 	return 0;

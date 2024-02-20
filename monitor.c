@@ -22,6 +22,7 @@
 #define IDLE 5
 #define BUSY 6
 #define COLLISION 7
+#define RETRANSMISSION 8
 #define max_16_bit_val 65535
 
 static volatile RCCr* const RCC = (RCCr*)0x40023800;
@@ -141,6 +142,10 @@ void TIM2_IRQHandler() {
 	GPIOA->AFRH &= ~(0b1111<<28);
 	GPIOA->AFRH |= (0b01<<28);
 
+	if(state == RETRANSMISSION){
+		// start tim4
+		TIM4->CR1 =1
+	}
 	// set state to busy, edge is found
 	state = BUSY;
 	// write number to PB5 - PB15 (skipping PB11)
@@ -290,11 +295,13 @@ int get_state(){
 
 void set_state(int new_state){
 	state = new_state;
-	uint32_t *odr = (uint32_t*)gpiob_odr;
-	// clear the LED lights
-	*odr = *odr & ~all_lights;
-	// Or odr's value with a 1 shifted to the left by number
-	*odr |= (1<<state);
+	if(state != RETRANSMISSION){
+		uint32_t *odr = (uint32_t*)gpiob_odr;
+		// clear the LED lights
+		*odr = *odr & ~all_lights;
+		// Or odr's value with a 1 shifted to the left by number
+		*odr |= (1<<state);
+	}
 }
 
 buffer get_buffer(){

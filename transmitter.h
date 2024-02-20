@@ -11,5 +11,6 @@
 void init_transmitter();
 void transmit(char* message, int length);
 void clear_trans_message();
+int get_failed_status();
 
 #endif
