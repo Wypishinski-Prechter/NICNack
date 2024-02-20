@@ -48,7 +48,8 @@ static int bad_pre = 2;
 static int not_for_us = 0;
 static int valid = 1;
 static int time;
-static int const our_ip = 0x55;
+static int const our_ip_top = 0x3F;
+static int const our_ip_bot = 0x3C;
 static int max = 255;
 
 void init_leds(){
@@ -214,16 +215,22 @@ void TIM2_IRQHandler() {
 
 
 		if(buff.pre == 1 && buff.size != max){
+			//check source
 			if(buff.sor == -1){
 				buff.sor = ascii_conv;
 			}else {
+				//check destination
 				if (buff.dest  == -1){
 					buff.dest = ascii_conv;
-				}else if(buff.dest != our_ip){
+				}else if(out_ip_bot < buff.dest && buff.dest > our_ip_top){
 					buff.valid = not_for_us;
 				} else {
 					if(buff.len == -1){
-						buff.len = ascii_conv;
+						if(ascii_conv > 0){
+							buff.len = ascii_conv;
+						}else{
+							buff.valid = bad_pre;
+						}
 					} else{
 						if(buff.crc == -1){
 							if(ascii_conv == 1 || ascii_conv == 0){
@@ -236,12 +243,14 @@ void TIM2_IRQHandler() {
 								buff.ascii_buff[buff.size] = ascii_conv;
 								buff.size++;
 							}else{
-								if(buff.crc == 1){
-									if(buff.trail == -1){
+								if(buff.crc == 0){
+									if(buff.trail == -1 && ascii_conv == 0xAA){
 										buff.trail = ascii_conv;
+									} else{
+										buff.valid = bad_pre;
 									}
 								} else{
-									buff.valid = buff_full;
+									buff.valid = bad_pre;
 								}
 							}
 						}
