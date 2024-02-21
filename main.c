@@ -10,6 +10,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "uart_driver.h"
 #include "monitor.h"
@@ -49,7 +50,9 @@ int main(void){
 
 		// tokenize
 		char *command = strtok(input, " \n");
+		char  *address_string = strtok(NULL, " ");
 		data = strtok(NULL, " \n");
+		int address = (int) strtoul(address_string, NULL, 0);
 
 
 		// when receive is typed
@@ -75,17 +78,24 @@ int main(void){
 		}
 
 		if (strcmp(command, "send") == 0){
-			if(get_state() == IDLE){
-				if(strcmp(data, "null") == 0){
-					// send null to transmitter
-					char* null_string = {0};
-					transmit(null_string, 1);
-				} else {
-					//send to transmission
-					transmit(data, strlen(data));
-				}
+			if (address == 0){
+				printf("Please use a valid address\n");
 			} else {
-				printf("%s\n", "Line is busy. Please try again later.");
+				if(get_state() == IDLE){
+					//testing
+					if(strcmp(data, "null") == 0){
+						// send null to transmitter
+						char* null_string = {0};
+						transmit(null_string,address, 1);
+					} else {
+
+						//send to transmission
+						transmit(data,address, strlen(data));
+					}
+				} else {
+					printf("%s\n", "Line is busy. Please try again later.");
+
+				}
 			}
 		}
 		// check if retransmission failed
