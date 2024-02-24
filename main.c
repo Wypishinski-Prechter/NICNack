@@ -35,7 +35,7 @@ int main(void){
 	clear_buffer();
 
 	buffer buffer_m;
-
+	//SOFIA
 	while(1){
 		// user interface
 		printf("%s\n", "Please enter a message you want to transmit.");
