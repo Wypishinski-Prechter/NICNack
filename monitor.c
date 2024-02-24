@@ -29,7 +29,7 @@ static volatile RCCr* const RCC = (RCCr*)0x40023800;
 
 static volatile TIMx* const TIM2 = (TIMx*)0x40000000;
 static volatile TIMx* const TIM3 = (TIMx*)0x40000400;
-
+static volatile TIMx* const TIM4 = (TIMx*)0x40000800;
 static volatile uint32_t* const NVIC_ISER = (uint32_t*)0xE000E100;
 
 static volatile GPIO* const GPIOA = (GPIO*)0x40020000;
