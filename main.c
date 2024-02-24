@@ -100,6 +100,7 @@ int main(void){
 		}
 		// check if retransmission failed
 		if (get_failed_status){
+			set_failed_status(0);
 			printf("%s", "Transmission failed.\n");
 		}
 	}
