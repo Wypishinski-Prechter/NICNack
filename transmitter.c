@@ -23,7 +23,10 @@ static volatile GPIO* const GPIOB = (GPIO*)0x40020400;
 
 //set up SysTick Timer
 static volatile SYSTick* const systick = (SYSTick*)0xE000E010;
-
+static volatile RCCr* const RCC = (RCCr*)0x40023800;
+static volatile uint32_t* const NVIC_ISER = (uint32_t*)0xE000E100;
+static volatile TIMx* const TIM4 = (TIMx*)0x40000800;
+static volatile TIMx* const TIM3 = (TIMx*)0x40000400;
 static volatile int current_bit = 0;
 static volatile int trans_message[888];
 static volatile int max_size = 0;
@@ -63,9 +66,9 @@ void init_transmitter(){
 	TIM4->CCMR1 = 0b11 << 4;
 	// output
 	TIM4->CCER = 0;
-	TIM4->DIER = (1<<1);
+	TIM4->DIER |= (1<<0);
 	// prescaler so we can count up to 1s
-	TIM4->PSC = 1;
+	TIM4->PSC = 243;
 
 }
 void transmit(char* message, int address, int length){
@@ -221,18 +224,25 @@ void TIM4_IRQHandler(){
 	TIM4->SR = 0;
 	// turn on isr
 	TIM4->DIER &= ~(1<<1);
+	TIM4->DIER &= ~(1);
 	// turn off counter
 	TIM4->CR1 =0;
 	// check if idle
 	if(retransmit < 15){
-		if(get_state()== IDLE){
+		int state = get_state();
+		if(state== IDLE){
 			// turn on systick and restart transmission (up to 15 tries)
 			current_bit = 0;
 			systick->CTRL |= (3);
 		} else {
 			// if not in idle, wait again
-			TIM4->DIER &= ~(1<<1);
-			TIM4->CR1 = 1;
+			if(state != COLLISION){
+				// wait again
+				TIM4->CR1 = 1;
+			} else {
+				set_state(RETRANSMISSION);
+			}
+			TIM4->DIER |= (1);
 		}
 		retransmit++;
 	} else {
@@ -243,4 +253,7 @@ void TIM4_IRQHandler(){
 
 int get_failed_status(){
 	return failed;
+}
+void set_failed_status(int fail){
+	failed = fail;
 }
