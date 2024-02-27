@@ -15,9 +15,11 @@
 
 #define sys_address 0xE000E010
 #define half_ms 8000
+#define MS 160000
 #define IDLE 5
 #define BUSY 6
 #define COLLISION 7
+#define RETRANSMISSION 8
 
 static volatile GPIO* const GPIOB = (GPIO*)0x40020400;
 
@@ -68,7 +70,7 @@ void init_transmitter(){
 	TIM4->CCER = 0;
 	TIM4->DIER |= (1<<0);
 	// prescaler so we can count up to 1s
-	TIM4->PSC = 243;
+	TIM4->PSC = MS;
 
 }
 void transmit(char* message, int address, int length){
@@ -153,8 +155,8 @@ void transmit(char* message, int address, int length){
 			}
 		}
 	}
-	// adding CRC field
-	int CRC_field = 0xAA;
+	// adding CRC field 0xAA = 170
+	int CRC_field = 170;
 	for (int i = 0; i < 8; i++){
 		if (((CRC_field >> (7-i)) & 1) == 1){
 				trans_message[count++] = 0;
@@ -186,6 +188,7 @@ void SysTick_Handler(){
 			current_bit = 0;
 			current_output = 1;
 			set_state(IDLE);
+			GPIOB->ODR |= (1<<3);
 		} else {
 			int state = get_state();
 			if (state != COLLISION){
@@ -205,8 +208,8 @@ void SysTick_Handler(){
 				// calc random value that is between 1 and Nmax (200)
 				// r* 5ms
 				int r = rand() % 200;
-				TIM4->ARR = (r*0.005);
-				TIM4->CCR1 = (r*0.005);
+				TIM4->ARR = (r*5);
+				TIM4->CCR1 = (r*5);
 				set_state(RETRANSMISSION);
 			}
 		}
