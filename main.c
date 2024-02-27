@@ -51,7 +51,7 @@ int main(void){
 		// tokenize
 		char *command = strtok(input, " \n");
 		char  *address_string = strtok(NULL, " ");
-		data = strtok(NULL, " \n");
+		data = strtok(NULL, "\n");
 		int address = (int) strtoul(address_string, NULL, 0);
 
 
@@ -99,7 +99,7 @@ int main(void){
 			}
 		}
 		// check if retransmission failed
-		if (get_failed_status){
+		if (get_failed_status()){
 			set_failed_status(0);
 			printf("%s", "Transmission failed.\n");
 		}
