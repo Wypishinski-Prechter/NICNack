@@ -22,14 +22,13 @@
 #define IDLE 5
 #define BUSY 6
 #define COLLISION 7
-#define RETRANSMISSION 8
 #define max_16_bit_val 65535
 
 static volatile RCCr* const RCC = (RCCr*)0x40023800;
 
 static volatile TIMx* const TIM2 = (TIMx*)0x40000000;
 static volatile TIMx* const TIM3 = (TIMx*)0x40000400;
-static volatile TIMx* const TIM4 = (TIMx*)0x40000800;
+
 static volatile uint32_t* const NVIC_ISER = (uint32_t*)0xE000E100;
 
 static volatile GPIO* const GPIOA = (GPIO*)0x40020000;
@@ -145,10 +144,6 @@ void TIM2_IRQHandler() {
 	GPIOA->AFRH &= ~(0b1111<<28);
 	GPIOA->AFRH |= (0b01<<28);
 
-	if(state == RETRANSMISSION){
-		// start tim4
-		TIM4->CR1 =1
-	}
 	// set state to busy, edge is found
 	state = BUSY;
 	// write number to PB5 - PB15 (skipping PB11)
@@ -227,7 +222,7 @@ void TIM2_IRQHandler() {
 				//check destination
 				if (buff.dest  == -1){
 					buff.dest = ascii_conv;
-				}else if(out_ip_bot < buff.dest && buff.dest > our_ip_top){
+				}else if(our_ip_bot < buff.dest && buff.dest > our_ip_top){
 					buff.valid = not_for_us;
 				} else {
 					if(buff.len == -1){
@@ -251,9 +246,9 @@ void TIM2_IRQHandler() {
 								if(buff.crc == 0){
 									if(buff.trail == -1 && ascii_conv == 0xAA){
 										buff.trail = ascii_conv;
-									} else{
-										buff.valid = bad_pre;
-									}
+									} //else{
+										//buff.valid = bad_pre;
+									//}
 								} else{
 									buff.valid = bad_pre;
 								}
@@ -262,7 +257,6 @@ void TIM2_IRQHandler() {
 					}
 				}
 			}
-			buff.ascii_buff[buff.size++] = (char)ascii_conv;
 		} else if (buff.size == max){
 			buff.valid = buff_full;
 		}else if(buff.pre == -1 && ascii_conv != 0x55){
@@ -347,13 +341,11 @@ int get_state(){
 
 void set_state(int new_state){
 	state = new_state;
-	if(state != RETRANSMISSION){
-		uint32_t *odr = (uint32_t*)gpiob_odr;
-		// clear the LED lights
-		*odr = *odr & ~all_lights;
-		// Or odr's value with a 1 shifted to the left by number
-		*odr |= (1<<state);
-	}
+	uint32_t *odr = (uint32_t*)gpiob_odr;
+	// clear the LED lights
+	*odr = *odr & ~all_lights;
+	// Or odr's value with a 1 shifted to the left by number
+	*odr |= (1<<state);
 }
 
 buffer get_buffer(){
